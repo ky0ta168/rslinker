@@ -3,9 +3,9 @@
 //! C++ 版: `include/FileHeader.hpp`
 
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, BufWriter};
 
-use crate::binary_io::ReadExt;
+use crate::binary_io::{ReadExt, WriteExt};
 use crate::error::Result;
 
 #[derive(Debug, Clone)]
@@ -25,6 +25,17 @@ pub mod machine {
 
 impl FileHeader {
     pub const SIZE: u32 = 20;
+
+    pub fn write(&self, w: &mut BufWriter<File>) -> Result<()> {
+        w.write_u16_le(self.machine)?;
+        w.write_u16_le(self.number_of_sections)?;
+        w.write_u32_le(self.time_date_stamp)?;
+        w.write_u32_le(self.pointer_to_symbol_table)?;
+        w.write_u32_le(self.number_of_symbols)?;
+        w.write_u16_le(self.size_of_optional_header)?;
+        w.write_u16_le(self.characteristics)?;
+        Ok(())
+    }
 
     pub fn read(r: &mut BufReader<File>) -> Result<Self> {
         Ok(Self {

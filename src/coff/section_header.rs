@@ -3,9 +3,9 @@
 //! C++ 版: `include/SectionHeader.hpp`
 
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, BufWriter};
 
-use crate::binary_io::ReadExt;
+use crate::binary_io::{ReadExt, WriteExt};
 use crate::error::Result;
 
 #[derive(Debug, Clone)]
@@ -36,6 +36,20 @@ pub mod ch {
 
 impl SectionHeader {
     pub const SIZE: u32 = 40;
+
+    pub fn write(&self, w: &mut BufWriter<File>) -> Result<()> {
+        w.write_bytes(&self.name)?;
+        w.write_u32_le(self.virtual_size)?;
+        w.write_u32_le(self.virtual_address)?;
+        w.write_u32_le(self.size_of_raw_data)?;
+        w.write_u32_le(self.pointer_to_raw_data)?;
+        w.write_u32_le(self.pointer_to_relocations)?;
+        w.write_u32_le(self.pointer_to_line_numbers)?;
+        w.write_u16_le(self.number_of_relocations)?;
+        w.write_u16_le(self.number_of_line_numbers)?;
+        w.write_u32_le(self.characteristics)?;
+        Ok(())
+    }
 
     pub fn read(r: &mut BufReader<File>) -> Result<Self> {
         Ok(Self {
