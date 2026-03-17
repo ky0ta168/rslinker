@@ -17,13 +17,13 @@ fn main() {
 
     // FileHeader
     println!("=== FileHeader ===");
-    println!("  machine            : {:#06x}", obj.file_header.machine);
+    println!("  Machine            : {:#06x}", obj.file_header.machine);
     println!(
-        "  number_of_sections : {}",
+        "  NumberOfSections   : {}",
         obj.file_header.number_of_sections
     );
     println!(
-        "  number_of_symbols  : {}",
+        "  NumberOfSymbols    : {}",
         obj.file_header.number_of_symbols
     );
 
@@ -31,7 +31,7 @@ fn main() {
     println!("\n=== Sections ({}) ===", obj.sections.len());
     for sec in &obj.sections {
         println!(
-            "  [{:8}]  va={:#010x}  raw_size={:#08x}  relocs={}",
+            "  [{:8}]  VirtualAddress={:#010x}  SizeOfRawData={:#08x}  NumberOfRelocations={}",
             sec.header.name_str(),
             sec.header.virtual_address,
             sec.header.size_of_raw_data,
@@ -39,7 +39,7 @@ fn main() {
         );
         for r in &sec.relocations {
             println!(
-                "    reloc  offset={:#010x}  sym_idx={}  type={:?}",
+                "    VirtualAddress={:#010x}  SymbolTableIndex={}  Type={:?}",
                 r.virtual_address, r.symbol_index, r.reloc_type
             );
         }
@@ -50,11 +50,12 @@ fn main() {
     for entry in &obj.symbols {
         let s = &entry.symbol;
         println!(
-            "  sc={:3}  sec={:5}  val={:#010x}  {}",
-            s.storage_class,
-            s.section_number,
+            "  Value={:#010x}  SectionNumber={:2}  Type={:#06x}  StorageClass={:3}  {}",
             s.value,
-            s.resolve_name(&obj.string_table)
+            s.section_number as i16,
+            s.sym_type,
+            s.storage_class,
+            s.resolve_name(&obj.string_table),
         );
     }
 
