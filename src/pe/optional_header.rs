@@ -46,7 +46,7 @@ pub mod dd {
 
 pub struct OptionalHeader32 {
     // Standard Fields
-    pub magic_number: u16,                   // 0x10b = PE32
+    pub magic_number: u16, // 0x10b = PE32
     pub major_linker_version: u8,
     pub minor_linker_version: u8,
     pub size_of_code: u32,
@@ -66,7 +66,7 @@ pub struct OptionalHeader32 {
     pub minor_image_version: u16,
     pub major_subsystem_version: u16,
     pub minor_subsystem_version: u16,
-    pub win32_version_value: u32,           // 予約。0 固定
+    pub win32_version_value: u32, // 予約。0 固定
     pub size_of_image: u32,
     pub size_of_headers: u32,
     pub check_sum: u32,
@@ -76,8 +76,8 @@ pub struct OptionalHeader32 {
     pub size_of_stack_commit: u32,
     pub size_of_heap_reserve: u32,
     pub size_of_heap_commit: u32,
-    pub loader_flags: u32,                  // 予約。0 固定
-    pub number_of_rva_and_sizes: u32,       // 常に 16
+    pub loader_flags: u32,            // 予約。0 固定
+    pub number_of_rva_and_sizes: u32, // 常に 16
 
     pub data_directories: [DataDirectory; 16],
 }

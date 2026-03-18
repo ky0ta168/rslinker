@@ -22,9 +22,21 @@ C++ で書かれた Windows 32bit PE リンカー (`reference/spell/`) を Rust 
 | 1 | 基盤: `types.rs` / `error.rs` / `binary_io.rs` | ✅ 完了 |
 | 2 | COFF パーサ: `coff/file_header.rs` / `section_header.rs` / `symbol.rs` / `object_file.rs` | ✅ 完了 |
 | 3 | PE 構造体+ライタ: `pe/dos_header.rs` / `optional_header.rs` / `pe_header.rs` / `pe_file.rs` | ✅ 完了 |
-| 4 | リンカ前半: `linker/options.rs` / `linker/section.rs` (セクションマージ・レイアウト) | 未着手 |
+| 4 | リンカ前半: `linker/options.rs` / `linker/section.rs` (セクションマージ・レイアウト) | ✅ 完了 |
 | 5 | リンカ後半: `import.rs` / `linker/dll.rs` / `linker/symbol.rs` (DLL 検索・シンボル解決) | 未着手 |
 | 6 | 仕上げ: `linker/relocation.rs` / エントリポイント設定 / PE 出力 / `main.rs` 完成 | 未着手 |
+
+## テスト用オブジェクトファイルの作成
+
+動作確認には 32-bit x86 の `.obj` が必要。ソースは `examples/` に置き、以下でコンパイルする。
+`.obj` はコンパイル生成物なので `.gitignore` に追加してコミットしない。
+
+```bash
+export PATH="/c/msys64/mingw32/bin:$PATH"
+cd examples
+i686-w64-mingw32-gcc -c foo.c -o foo.obj
+i686-w64-mingw32-gcc -c bar.c -o bar.obj
+```
 
 ## 参照コード
 

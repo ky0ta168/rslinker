@@ -9,25 +9,25 @@ use crate::binary_io::WriteExt;
 use crate::error::Result;
 
 pub struct DosHeader {
-    pub magic_number: u16,                  // e_magic  : 0x5a4d ("MZ")
-    pub last_page_size: u16,                // e_cblp
-    pub number_of_pages: u16,               // e_cp
-    pub number_of_relocation_entries: u16,  // e_crlc
-    pub header_size: u16,                   // e_cparhdr
-    pub min_extra_memory: u16,              // e_minalloc
-    pub max_extra_memory: u16,              // e_maxalloc
-    pub stack_segment: u16,                 // e_ss
-    pub stack_pointer: u16,                 // e_sp
-    pub checksum: u16,                      // e_csum
-    pub instruction_pointer: u16,           // e_ip
-    pub code_segment: u16,                  // e_cs
-    pub relocation_table_offset: u16,       // e_lfarlc
-    pub overlay_number: u16,                // e_ovno
-    pub reserved1: [u8; 8],                 // e_res
-    pub oem_id: u16,                        // e_oemid
-    pub oem_info: u16,                      // e_oeminfo
-    pub reserved2: [u8; 20],                // e_res2
-    pub pe_header_offset: u32,              // e_lfanew
+    pub magic_number: u16,                 // e_magic  : 0x5a4d ("MZ")
+    pub last_page_size: u16,               // e_cblp
+    pub number_of_pages: u16,              // e_cp
+    pub number_of_relocation_entries: u16, // e_crlc
+    pub header_size: u16,                  // e_cparhdr
+    pub min_extra_memory: u16,             // e_minalloc
+    pub max_extra_memory: u16,             // e_maxalloc
+    pub stack_segment: u16,                // e_ss
+    pub stack_pointer: u16,                // e_sp
+    pub checksum: u16,                     // e_csum
+    pub instruction_pointer: u16,          // e_ip
+    pub code_segment: u16,                 // e_cs
+    pub relocation_table_offset: u16,      // e_lfarlc
+    pub overlay_number: u16,               // e_ovno
+    pub reserved1: [u8; 8],                // e_res
+    pub oem_id: u16,                       // e_oemid
+    pub oem_info: u16,                     // e_oeminfo
+    pub reserved2: [u8; 20],               // e_res2
+    pub pe_header_offset: u32,             // e_lfanew
 }
 
 impl Default for DosHeader {

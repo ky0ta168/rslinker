@@ -3,7 +3,7 @@
 //! C++ 版: `include/PeFile.hpp`
 
 use std::fs::File;
-use std::io::{BufWriter, SeekFrom, Seek};
+use std::io::{BufWriter, Seek, SeekFrom};
 
 use crate::binary_io::WriteExt;
 
