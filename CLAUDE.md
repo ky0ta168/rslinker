@@ -30,7 +30,7 @@ C++ で書かれた Windows 32bit PE リンカー (`reference/spell/`) を Rust 
 | 3 | PE 構造体+ライタ: `pe/dos_header.rs` / `optional_header.rs` / `pe_header.rs` / `pe_file.rs` | ✅ 完了 |
 | 4 | リンカ前半: `linker/options.rs` / `linker/section.rs` (セクションマージ・レイアウト) | ✅ 完了 |
 | 5 | リンカ後半: `linker/import.rs` / `linker/dll.rs` / `linker/symbol.rs` (DLL 検索・シンボル解決) | ✅ 完了 |
-| 6 | 仕上げ: `linker/relocation.rs` / エントリポイント設定 / PE 出力 / `main.rs` 完成 | 未着手 |
+| 6 | 仕上げ: `linker/relocation.rs` / エントリポイント設定 / PE 出力 / `main.rs` 完成 | ✅ 完了 |
 
 ## テスト用オブジェクトファイルの作成
 

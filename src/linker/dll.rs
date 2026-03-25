@@ -1,32 +1,34 @@
 //! DLL シンボル検索
 //!
-//! Windows API (LoadLibraryA / GetProcAddress) を使って
-//! シンボルが存在する DLL を探す。
+//! PE ファイルのエクスポートテーブルを直接読み込んでシンボルを検索する。
+//! LoadLibraryA / GetProcAddress を使わないため、リンカ自身と
+//! ビット数が異なる DLL (例: 64 ビットリンカで 32 ビット DLL) も扱える。
+//!
 //! C++ 版: main.cpp の tryFindDll 関数 (約 290〜343 行)
 
-use std::ffi::CString;
+use std::collections::HashSet;
+use std::fs::File;
+use std::io::BufReader;
 
-use windows::Win32::Foundation::HMODULE;
-use windows::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryA};
-use windows::core::PCSTR;
+use crate::binary_io::ReadExt;
 
 // ---------------------------------------------------------------------------
 // ロード済み DLL
 // ---------------------------------------------------------------------------
 
-/// ロード済み DLL のハンドルとメタデータ
+/// DLL のメタデータとエクスポートシンボル名一覧
 pub struct LoadedDll {
     /// フルパス (例: "C:\\Windows\\System32\\kernel32.dll")
     pub path: String,
     /// ベース名 (例: "kernel32.dll")
     pub name: String,
-    handle: HMODULE,
+    /// エクスポートされた関数名の集合
+    exports: HashSet<String>,
 }
 
-/// DLL をロードする。失敗した場合は None を返す。
+/// DLL ファイルを開いてエクスポートテーブルを読み込む。失敗した場合は None を返す。
 pub fn load_dll(path: &str) -> Option<LoadedDll> {
-    let cstr = CString::new(path).ok()?;
-    let handle = unsafe { LoadLibraryA(PCSTR(cstr.as_ptr() as *const u8)).ok()? };
+    let exports = read_exports(path).ok()?;
     let name = std::path::Path::new(path)
         .file_name()?
         .to_string_lossy()
@@ -34,15 +36,12 @@ pub fn load_dll(path: &str) -> Option<LoadedDll> {
     Some(LoadedDll {
         path: path.to_string(),
         name,
-        handle,
+        exports,
     })
 }
 
 fn has_proc(dll: &LoadedDll, name: &str) -> bool {
-    let Ok(cstr) = CString::new(name) else {
-        return false;
-    };
-    unsafe { GetProcAddress(dll.handle, PCSTR(cstr.as_ptr() as *const u8)).is_some() }
+    dll.exports.contains(name)
 }
 
 // ---------------------------------------------------------------------------
@@ -92,4 +91,145 @@ pub fn try_find_dll<'a>(function_name: &str, dlls: &'a [LoadedDll]) -> Option<(S
     }
 
     None
+}
+
+// ---------------------------------------------------------------------------
+// PE エクスポートテーブルの読み込み
+// ---------------------------------------------------------------------------
+
+/// (virtual_address, size_of_raw_data, pointer_to_raw_data)
+type SectionInfo = (u32, u32, u32);
+
+/// RVA をファイルオフセットに変換する。
+/// 各セクションの (VA, 生データサイズ, ファイルオフセット) を使って変換する。
+fn rva_to_offset(rva: u32, sections: &[SectionInfo]) -> Option<u32> {
+    for &(va, size, ptr) in sections {
+        if rva >= va && rva < va + size {
+            return Some(rva - va + ptr);
+        }
+    }
+    None
+}
+
+/// PE ファイルからエクスポートされた関数名の集合を読み込む。
+///
+/// PE32 (32 ビット) と PE32+ (64 ビット) の両方に対応する。
+fn read_exports(path: &str) -> crate::error::Result<HashSet<String>> {
+    let f = File::open(path)?;
+    let mut r = BufReader::new(f);
+
+    // DOS ヘッダ: e_lfanew (PE ヘッダへのオフセット) を取得
+    // e_lfanew は DOS ヘッダの先頭から 0x3c バイト目にある
+    r.set_position(0x3c)?;
+    let pe_offset = r.read_u32_le()?;
+
+    // PE シグネチャ "PE\0\0" を確認
+    r.set_position(pe_offset as u64)?;
+    let sig = r.read_u32_le()?;
+    if sig != 0x0000_4550 {
+        return Err(crate::error::LinkerError::InvalidFormat(
+            format!("{path}: not a PE file"),
+        ));
+    }
+
+    // COFF ファイルヘッダ (20 バイト) を読む
+    let _machine = r.read_u16_le()?;
+    let number_of_sections = r.read_u16_le()?;
+    let _time_date_stamp = r.read_u32_le()?;
+    let _pointer_to_symbol_table = r.read_u32_le()?;
+    let _number_of_symbols = r.read_u32_le()?;
+    let size_of_optional_header = r.read_u16_le()?;
+    let _characteristics = r.read_u16_le()?;
+
+    // オプショナルヘッダの先頭位置を記録
+    let opt_header_offset = r.position()?;
+
+    // magic でビット数を判別
+    // 0x010b = PE32 (32 ビット), 0x020b = PE32+ (64 ビット)
+    let magic = r.read_u16_le()?;
+
+    // エクスポートディレクトリの RVA は DataDirectory[0].virtual_address にある。
+    // DataDirectory の開始オフセット (オプショナルヘッダ先頭からの距離):
+    //   PE32:  96 バイト目 (標準フィールド 28B + Windows 固有フィールド 68B)
+    //   PE32+: 112 バイト目 (標準フィールド 24B + Windows 固有フィールド 88B)
+    let data_dir_offset: u64 = match magic {
+        0x010b => 96,
+        0x020b => 112,
+        _ => return Err(crate::error::LinkerError::InvalidFormat(
+            format!("{path}: unknown optional header magic {magic:#06x}"),
+        )),
+    };
+    r.set_position(opt_header_offset + data_dir_offset)?;
+    let export_dir_rva = r.read_u32_le()?;
+    let export_dir_size = r.read_u32_le()?;
+
+    if export_dir_rva == 0 || export_dir_size == 0 {
+        // エクスポートなし
+        return Ok(HashSet::new());
+    }
+
+    // セクションヘッダを読む (オプショナルヘッダの直後)
+    // セクションヘッダは 40 バイト固定
+    r.set_position(opt_header_offset + size_of_optional_header as u64)?;
+    let mut sections: Vec<SectionInfo> = Vec::new();
+    for _ in 0..number_of_sections {
+        let _name = r.read_bytes(8)?;
+        let virtual_size = r.read_u32_le()?;
+        let virtual_address = r.read_u32_le()?;
+        let size_of_raw_data = r.read_u32_le()?;
+        let pointer_to_raw_data = r.read_u32_le()?;
+        r.read_bytes(16)?; // pointer_to_relocations 〜 characteristics (残り 16 バイト)
+        let raw_size = if size_of_raw_data > 0 { size_of_raw_data } else { virtual_size };
+        sections.push((virtual_address, raw_size, pointer_to_raw_data));
+    }
+
+    // エクスポートディレクトリをファイルオフセットに変換して読む
+    let export_dir_offset = rva_to_offset(export_dir_rva, &sections)
+        .ok_or_else(|| crate::error::LinkerError::InvalidFormat(
+            format!("{path}: export directory RVA {export_dir_rva:#010x} not found in sections"),
+        ))?;
+
+    // IMAGE_EXPORT_DIRECTORY (40 バイト)
+    r.set_position(export_dir_offset as u64)?;
+    r.read_bytes(24)?; // Characteristics 〜 Base (先頭 24 バイトはスキップ)
+    let number_of_names = r.read_u32_le()?;       // offset 24
+    let _address_of_functions = r.read_u32_le()?; // offset 28
+    let address_of_names = r.read_u32_le()?;       // offset 32
+
+    if number_of_names == 0 {
+        return Ok(HashSet::new());
+    }
+
+    // Name Pointer Table: number_of_names 個の RVA (各 4 バイト)
+    // 各 RVA は null 終端の関数名文字列を指す
+    let names_offset = rva_to_offset(address_of_names, &sections)
+        .ok_or_else(|| crate::error::LinkerError::InvalidFormat(
+            format!("{path}: name pointer table RVA not found"),
+        ))?;
+
+    r.set_position(names_offset as u64)?;
+    let mut name_rvas: Vec<u32> = Vec::with_capacity(number_of_names as usize);
+    for _ in 0..number_of_names {
+        name_rvas.push(r.read_u32_le()?);
+    }
+
+    // 各関数名を読む
+    let mut exports = HashSet::new();
+    for name_rva in name_rvas {
+        let Some(name_offset) = rva_to_offset(name_rva, &sections) else {
+            continue;
+        };
+        r.set_position(name_offset as u64)?;
+        let mut name = String::new();
+        loop {
+            let b = r.read_u8()?;
+            if b == 0 {
+                break;
+            }
+            name.push(b as char);
+        }
+        exports.insert(name);
+    }
+
+    Ok(exports)
 }
