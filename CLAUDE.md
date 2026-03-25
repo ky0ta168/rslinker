@@ -10,6 +10,12 @@ C++ で書かれた Windows 32bit PE リンカー (`reference/spell/`) を Rust 
   - 例: パース機能を実装したらパース結果をダンプする
   - 次のステップに進む際は前のステップの確認コードを削除してよい
 
+## ユーザーレベル
+
+- プログラミングは書けるが、アライメントや PE 構造などの低レイヤー知識は初めて
+- コメントや説明は「プログラム中級者・低レイヤー初心者」向けにする
+  - 「バイト単位で何ブロック確保するか」のような具体例付きの説明が有効
+
 ## 実装方針
 
 - バイナリ読み込みは `read_u16_le()` 等を使った**手動読み込み**で統一する
@@ -23,7 +29,7 @@ C++ で書かれた Windows 32bit PE リンカー (`reference/spell/`) を Rust 
 | 2 | COFF パーサ: `coff/file_header.rs` / `section_header.rs` / `symbol.rs` / `object_file.rs` | ✅ 完了 |
 | 3 | PE 構造体+ライタ: `pe/dos_header.rs` / `optional_header.rs` / `pe_header.rs` / `pe_file.rs` | ✅ 完了 |
 | 4 | リンカ前半: `linker/options.rs` / `linker/section.rs` (セクションマージ・レイアウト) | ✅ 完了 |
-| 5 | リンカ後半: `import.rs` / `linker/dll.rs` / `linker/symbol.rs` (DLL 検索・シンボル解決) | 未着手 |
+| 5 | リンカ後半: `linker/import.rs` / `linker/dll.rs` / `linker/symbol.rs` (DLL 検索・シンボル解決) | ✅ 完了 |
 | 6 | 仕上げ: `linker/relocation.rs` / エントリポイント設定 / PE 出力 / `main.rs` 完成 | 未着手 |
 
 ## テスト用オブジェクトファイルの作成

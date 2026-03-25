@@ -85,6 +85,23 @@ pub struct ObjectFile {
 }
 
 impl ObjectFile {
+    /// COFF raw シンボルテーブルインデックス (Aux を含む絶対インデックス) から
+    /// 対応する StandardSymbol を返す。
+    /// reloc.symbol_index はこの raw インデックスを指すため、このメソッドで解決する。
+    pub fn symbol_by_raw_index(
+        &self,
+        raw_index: usize,
+    ) -> Option<&crate::coff::symbol::StandardSymbol> {
+        let mut cur = 0usize;
+        for entry in &self.symbols {
+            if cur == raw_index {
+                return Some(&entry.symbol);
+            }
+            cur += 1 + entry.aux.len(); // standard(1) + aux の数
+        }
+        None
+    }
+
     /// ファイルパスから COFF オブジェクトファイルを読み込む
     pub fn from_file(path: &str) -> Result<Self> {
         let f = File::open(path)?;

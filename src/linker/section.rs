@@ -43,12 +43,14 @@ pub struct SectionLayout {
 // ---------------------------------------------------------------------------
 
 /// あるobjのセクションが MergedSection::data 内のどこから始まるか
+#[derive(Debug)]
 struct ObjSectionRef {
     obj_index: usize,
     offset: u32,
 }
 
 /// 同名セクションをマージした中間データ
+#[derive(Debug)]
 struct MergedSection {
     name: [u8; 8],
     data: Vec<u8>,
@@ -136,8 +138,9 @@ pub fn merge_and_layout(obj_files: &[ObjectFile], opts: &LinkerOptions) -> Secti
     // ヘッダ領域のサイズを計算 (import用に+2セクション分を予約)
     let max_sections = (sections.len() + 2) as u32;
     let header_bytes = DosHeader::SIZE + PeHeader::SIZE + SectionHeader::SIZE * max_sections;
-    // C++版と同じ: (n / align + 1) * align — 常に少なくとも1ブロック分の余白を確保
-    let size_of_headers = (header_bytes / opts.file_alignment + 1) * opts.file_alignment;
+    // header_bytes バイトのヘッダを file_alignment バイト単位で何ブロック確保するか
+    // 例: header_bytes=530, file_alignment=512 → 2ブロック → size_of_headers=1024
+    let size_of_headers = header_bytes.div_ceil(opts.file_alignment) * opts.file_alignment;
     let mut raw_address = size_of_headers;
     let mut virtual_address =
         (size_of_headers / opts.section_alignment + 1) * opts.section_alignment;

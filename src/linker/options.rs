@@ -21,6 +21,8 @@ pub struct LinkerOptions {
     pub stack_commit: u32,
     pub heap_reserve: u32,
     pub heap_commit: u32,
+    /// DLL 検索パス (例: "C:\\Windows\\System32\\kernel32.dll")
+    pub dll_paths: Vec<String>,
 }
 
 impl Default for LinkerOptions {
@@ -36,6 +38,11 @@ impl Default for LinkerOptions {
             stack_commit: 0x1000,
             heap_reserve: 0x100000,
             heap_commit: 0x1000,
+            dll_paths: vec![
+                r"C:\Windows\System32\kernel32.dll".to_string(),
+                r"C:\Windows\System32\msvcrt.dll".to_string(),
+                r"C:\Windows\System32\user32.dll".to_string(),
+            ],
         }
     }
 }
