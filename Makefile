@@ -1,6 +1,5 @@
 RSLINKER = cargo run --
 GCC      = i686-w64-mingw32-gcc
-PATH    := /c/msys64/mingw32/bin:$(PATH)
 
 all: examples
 

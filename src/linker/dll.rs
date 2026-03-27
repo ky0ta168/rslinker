@@ -27,6 +27,7 @@ pub struct LoadedDll {
 }
 
 /// DLL ファイルを開いてエクスポートテーブルを読み込む。失敗した場合は None を返す。
+/// C++ 版の LoadLibraryA に相当する処理。
 pub fn load_dll(path: &str) -> Option<LoadedDll> {
     let exports = read_exports(path).ok()?;
     let name = std::path::Path::new(path)
@@ -40,6 +41,8 @@ pub fn load_dll(path: &str) -> Option<LoadedDll> {
     })
 }
 
+/// DLL に指定の関数名がエクスポートされているか調べる。
+/// C++ 版の GetProcAddress に相当する処理。
 fn has_proc(dll: &LoadedDll, name: &str) -> bool {
     dll.exports.contains(name)
 }
@@ -127,9 +130,9 @@ fn read_exports(path: &str) -> crate::error::Result<HashSet<String>> {
     r.set_position(pe_offset as u64)?;
     let sig = r.read_u32_le()?;
     if sig != 0x0000_4550 {
-        return Err(crate::error::LinkerError::InvalidFormat(
-            format!("{path}: not a PE file"),
-        ));
+        return Err(crate::error::LinkerError::InvalidFormat(format!(
+            "{path}: not a PE file"
+        )));
     }
 
     // COFF ファイルヘッダ (20 バイト) を読む
@@ -155,9 +158,11 @@ fn read_exports(path: &str) -> crate::error::Result<HashSet<String>> {
     let data_dir_offset: u64 = match magic {
         0x010b => 96,
         0x020b => 112,
-        _ => return Err(crate::error::LinkerError::InvalidFormat(
-            format!("{path}: unknown optional header magic {magic:#06x}"),
-        )),
+        _ => {
+            return Err(crate::error::LinkerError::InvalidFormat(format!(
+                "{path}: unknown optional header magic {magic:#06x}"
+            )));
+        }
     };
     r.set_position(opt_header_offset + data_dir_offset)?;
     let export_dir_rva = r.read_u32_le()?;
@@ -179,22 +184,27 @@ fn read_exports(path: &str) -> crate::error::Result<HashSet<String>> {
         let size_of_raw_data = r.read_u32_le()?;
         let pointer_to_raw_data = r.read_u32_le()?;
         r.read_bytes(16)?; // pointer_to_relocations 〜 characteristics (残り 16 バイト)
-        let raw_size = if size_of_raw_data > 0 { size_of_raw_data } else { virtual_size };
+        let raw_size = if size_of_raw_data > 0 {
+            size_of_raw_data
+        } else {
+            virtual_size
+        };
         sections.push((virtual_address, raw_size, pointer_to_raw_data));
     }
 
     // エクスポートディレクトリをファイルオフセットに変換して読む
-    let export_dir_offset = rva_to_offset(export_dir_rva, &sections)
-        .ok_or_else(|| crate::error::LinkerError::InvalidFormat(
-            format!("{path}: export directory RVA {export_dir_rva:#010x} not found in sections"),
-        ))?;
+    let export_dir_offset = rva_to_offset(export_dir_rva, &sections).ok_or_else(|| {
+        crate::error::LinkerError::InvalidFormat(format!(
+            "{path}: export directory RVA {export_dir_rva:#010x} not found in sections"
+        ))
+    })?;
 
     // IMAGE_EXPORT_DIRECTORY (40 バイト)
     r.set_position(export_dir_offset as u64)?;
     r.read_bytes(24)?; // Characteristics 〜 Base (先頭 24 バイトはスキップ)
-    let number_of_names = r.read_u32_le()?;       // offset 24
+    let number_of_names = r.read_u32_le()?; // offset 24
     let _address_of_functions = r.read_u32_le()?; // offset 28
-    let address_of_names = r.read_u32_le()?;       // offset 32
+    let address_of_names = r.read_u32_le()?; // offset 32
 
     if number_of_names == 0 {
         return Ok(HashSet::new());
@@ -202,10 +212,11 @@ fn read_exports(path: &str) -> crate::error::Result<HashSet<String>> {
 
     // Name Pointer Table: number_of_names 個の RVA (各 4 バイト)
     // 各 RVA は null 終端の関数名文字列を指す
-    let names_offset = rva_to_offset(address_of_names, &sections)
-        .ok_or_else(|| crate::error::LinkerError::InvalidFormat(
-            format!("{path}: name pointer table RVA not found"),
-        ))?;
+    let names_offset = rva_to_offset(address_of_names, &sections).ok_or_else(|| {
+        crate::error::LinkerError::InvalidFormat(format!(
+            "{path}: name pointer table RVA not found"
+        ))
+    })?;
 
     r.set_position(names_offset as u64)?;
     let mut name_rvas: Vec<u32> = Vec::with_capacity(number_of_names as usize);

@@ -9,6 +9,7 @@ mod types;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use coff::file_header::{FileHeader, machine};
 use coff::object_file::ObjectFile;
 use error::LinkerError;
 use linker::dll::load_dll;
@@ -21,7 +22,6 @@ use pe::dos_header::DosHeader;
 use pe::optional_header::{DataDirectory, OptionalHeader32, dd, subsystem};
 use pe::pe_file::PeFile;
 use pe::pe_header::PeHeader;
-use coff::file_header::{FileHeader, machine};
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -98,8 +98,10 @@ fn main() {
         .get(&opts.entry_point)
         .ok_or_else(|| LinkerError::EntryPointNotFound(opts.entry_point.clone()))
         .expect("entry point not found");
-    let address_of_entry_point =
-        layout.pe_sections[entry_pos.section_index].header.virtual_address + entry_pos.offset;
+    let address_of_entry_point = layout.pe_sections[entry_pos.section_index]
+        .header
+        .virtual_address
+        + entry_pos.offset;
 
     // Stage 6c: SizeOfImage の計算
     // 各セクションを section_alignment ブロック単位で何ブロック使うかを合算し、

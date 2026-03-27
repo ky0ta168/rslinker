@@ -50,8 +50,9 @@ pub fn apply_relocations(
             };
             let changed_section_index = changed_pos.section_index;
             let changed_offset = changed_pos.offset;
-            let changed_section_va =
-                layout.pe_sections[changed_section_index].header.virtual_address;
+            let changed_section_va = layout.pe_sections[changed_section_index]
+                .header
+                .virtual_address;
 
             for reloc in &obj_sec.relocations {
                 if reloc.reloc_type == RelocType::Absolute {
