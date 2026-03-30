@@ -22,37 +22,44 @@ cargo run -- [options] <obj_file>...
 ### 例
 
 ```bash
-# 基本的な使い方
-cargo run -- foo.obj bar.obj -out hello.exe
+# 複数 .obj をリンク
+cargo run -- main.obj math.obj strings.obj -out app.exe
 
 # カスタム DLL をリンクする
-cargo run -- hello_dll.obj -dll mylib.dll -out hello_dll.exe
+cargo run -- main.obj -dll mylib.dll -out app.exe
 ```
 
 ## サンプルのビルド
 
+[just](https://github.com/casey/just) を使う。
+
 ```bash
-# 全サンプルをビルド
-make
+# 利用可能なサンプル一覧を表示
+just
 
 # 個別にビルド
-make examples/hello
-make examples/hello_dll
+just multi
+just global_var
+just bss
+just jmp_stub
 
 # 生成物を削除
-make clean
+just clean
 ```
 
-| サンプル | 内容 |
-|---------|------|
-| `examples/hello/` | MessageBoxA を使う GUI アプリ |
-| `examples/hello_dll/` | カスタム DLL (`mylib.dll`) を呼び出すアプリ |
+| サンプル | 確認できる機能 |
+|---------|--------------|
+| `examples/multi/` | 複数 .obj のリンク + カスタム DLL (`mathlib.dll`) の呼び出し |
+| `examples/global_var/` | 別 .obj で定義されたグローバル変数の参照 (`.data` リロケーション) |
+| `examples/bss/` | 未初期化グローバル配列 (`.bss`: `RawSize=0` / `VirtualSize>0`) |
+| `examples/jmp_stub/` | `__declspec(dllimport)` あり (IAT 直接参照) と なし (`.dlljmp` スタブ) の比較 |
 
 ## モジュール構成
 
 ```
 src/
 ├── main.rs              エントリポイント・コマンドライン引数パース
+├── dump.rs              デバッグ用ダンプ関数
 ├── error.rs             共通エラー型
 ├── binary_io.rs         バイナリ読み書きユーティリティ (ReadExt / WriteExt)
 ├── types.rs             共通型定義
