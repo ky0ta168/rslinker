@@ -129,8 +129,17 @@ impl ObjectFile {
         // 3. 各セクションのデータとリロケーションテーブル
         for sec in &mut sections {
             // セクションデータ
-            r.set_position(sec.header.pointer_to_raw_data as u64)?;
-            sec.data = r.read_bytes(sec.header.size_of_raw_data as usize)?;
+            // pointer_to_raw_data == 0 は「ファイル上に実体なし」を意味する (.bss など)。
+            // ただし COFF オブジェクトファイルでは .bss の仮想サイズを size_of_raw_data に
+            // 格納する慣習があるため、その場合はゼロ埋めのバイト列として扱う。
+            // こうすることで後続のマージ・レイアウト処理が正しいサイズを把握できる。
+            if sec.header.pointer_to_raw_data > 0 {
+                r.set_position(sec.header.pointer_to_raw_data as u64)?;
+                sec.data = r.read_bytes(sec.header.size_of_raw_data as usize)?;
+            } else if sec.header.size_of_raw_data > 0 {
+                // .bss: ファイル上の実体なし、仮想サイズ分のゼロ列として保持する
+                sec.data = vec![0u8; sec.header.size_of_raw_data as usize];
+            }
 
             // リロケーション
             if sec.header.number_of_relocations > 0 {
