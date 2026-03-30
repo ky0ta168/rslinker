@@ -2,6 +2,7 @@
 
 mod binary_io;
 mod coff;
+mod dump;
 mod error;
 mod linker;
 mod pe;
@@ -71,13 +72,16 @@ fn main() {
 
     // Stage 4: セクションマージ＆レイアウト
     let mut layout = merge_and_layout(&obj_files, &opts);
+    dump::dump_layout(&layout);
 
     // Stage 5a: グローバルシンボルテーブルの構築
     let mut symbol_table =
         build_symbol_table(&obj_files, &layout).expect("failed to build symbol table");
+    dump::dump_symbol_table(&symbol_table);
 
     // Stage 5b: DLL のロード
     let loaded_dlls: Vec<_> = opts.dll_paths.iter().filter_map(|p| load_dll(p)).collect();
+    dump::dump_loaded_dlls(&loaded_dlls);
 
     // Stage 5c: DLL シンボル解決 + .dlljmp / .idata 生成
     let imports = build_imports(
@@ -88,6 +92,7 @@ fn main() {
         &loaded_dlls,
     )
     .expect("failed to build imports");
+    dump::dump_imports(&imports);
 
     // Stage 6a: リロケーションの適用
     apply_relocations(&obj_files, &mut layout, &symbol_table, &imports, &opts)

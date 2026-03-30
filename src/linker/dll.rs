@@ -26,6 +26,20 @@ pub struct LoadedDll {
     exports: HashSet<String>,
 }
 
+impl LoadedDll {
+    /// エクスポート関数の総数を返す
+    pub fn export_count(&self) -> usize {
+        self.exports.len()
+    }
+
+    /// エクスポート関数名をアルファベット順で返す
+    pub fn exports_sorted(&self) -> Vec<&str> {
+        let mut v: Vec<&str> = self.exports.iter().map(|s| s.as_str()).collect();
+        v.sort_unstable();
+        v
+    }
+}
+
 /// DLL ファイルを開いてエクスポートテーブルを読み込む。失敗した場合は None を返す。
 /// C++ 版の LoadLibraryA に相当する処理。
 pub fn load_dll(path: &str) -> Option<LoadedDll> {

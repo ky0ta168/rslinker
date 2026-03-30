@@ -18,6 +18,7 @@ use super::options::LinkerOptions;
 // ---------------------------------------------------------------------------
 
 /// あるobjのセクションが、マージ後のPEセクション内のどこに配置されたか
+#[derive(Debug)]
 pub struct PeSectionPosition {
     pub section_index: usize, // pe_sections の何番目か
     pub offset: u32,          // そのPEセクション内のバイトオフセット
@@ -26,6 +27,7 @@ pub struct PeSectionPosition {
 /// (obj_index, section_name) → PeSectionPosition
 pub type ObjSectionMap = HashMap<(usize, String), PeSectionPosition>;
 
+#[derive(Debug)]
 pub struct SectionLayout {
     pub pe_sections: Vec<PeSection>,
     /// Step 5 (シンボル解決) で使う obj→PE位置のマッピング

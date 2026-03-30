@@ -13,6 +13,7 @@ use crate::error::Result;
 use super::dos_header::DosHeader;
 use super::pe_header::PeHeader;
 
+#[derive(Debug)]
 pub struct PeSection {
     pub header: SectionHeader,
     pub data: Vec<u8>,
